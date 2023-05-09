@@ -2,6 +2,7 @@ package gui;
 
 import javafx.util.Pair;
 
+import java.awt.*;
 import java.util.Observable;
 
 import static gui.GameVisualizer.*;

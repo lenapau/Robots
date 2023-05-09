@@ -1,13 +1,15 @@
 package gui;
 
 import javafx.util.Pair;
+import locale.Translatable;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.ResourceBundle;
 
-public class CoordinatesWindow extends JInternalFrame implements Observer
+public class CoordinatesWindow extends JInternalFrame implements Observer, Translatable 
 {
     private final TextArea coordinatesArea;
 
@@ -28,6 +30,10 @@ public class CoordinatesWindow extends JInternalFrame implements Observer
     {
         coordinatesArea.setText("X: " + newCoordinates.getKey() + "\nY: " + newCoordinates.getValue());
         coordinatesArea.invalidate();
+    }
+
+    public void translate(ResourceBundle bundle) {
+        setTitle(bundle.getString("robotCoordsWindow"));
     }
 
     @Override

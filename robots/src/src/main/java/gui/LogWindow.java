@@ -3,6 +3,9 @@ package gui;
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.TextArea;
+import java.awt.Point;
+import java.beans.PropertyVetoException;
+import java.io.Serializable;
 
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
@@ -11,7 +14,10 @@ import log.LogChangeListener;
 import log.LogEntry;
 import log.LogWindowSource;
 
-public class LogWindow extends JInternalFrame implements LogChangeListener
+import java.util.ResourceBundle;
+import locale.Translatable;
+
+public class LogWindow extends JInternalFrame implements LogChangeListener, Serializable, Settable, Translatable
 {
     private final LogWindowSource m_logSource;
     private final TextArea m_logContent;
@@ -46,5 +52,32 @@ public class LogWindow extends JInternalFrame implements LogChangeListener
     public void onLogChanged()
     {
         EventQueue.invokeLater(this::updateLogContent);
+    }
+
+    public void translate(ResourceBundle bundle) {
+        setTitle(bundle.getString("logWindow"));
+    }
+
+    private Object writeReplace() {
+        int state = isIcon() ? 1 : 0;
+        Point location = isIcon() ? null : getLocation();
+        return new Settings(getSize(), location, state, getClass().getSimpleName());
+    }
+
+    public void setSettings(Settings settings) {
+        if (settings.state == 1) {
+            try {
+                setIcon(true);
+            } catch (PropertyVetoException e) {
+                e.printStackTrace();
+            }
+        }
+        if (settings.location == null) {
+            setSize(settings.screenSize);
+        } else {
+            setBounds(settings.location.x, settings.location.y,
+                    settings.screenSize.width,
+                    settings.screenSize.height);
+        }
     }
 }

@@ -1,8 +1,12 @@
 package gui;
 
 import java.awt.*;
+import java.io.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
+import java.util.Locale;
+import java.util.ResourceBundle;
+import locale.Translatable;
 
 import logic.IObjectState;
 import logic.LocalConfig;
@@ -14,18 +18,16 @@ import javax.swing.event.MenuListener;
 
 import log.Logger;
 
-public class MainApplicationFrame extends JFrame {
 
+public class MainApplicationFrame extends JFrame implements Serializable, Settable {
     private final JDesktopPane desktopPane = new JDesktopPane();
     RobotModel robotModel = new RobotModel();
     RobotController controller = new RobotController(robotModel, new RobotView());
     private final GameWindow gameWindow = new GameWindow(controller);
     private final LogWindow logWindow = createLogWindow();
-
     CoordinatesWindow coordWindow = new CoordinatesWindow();
-
+    private ResourceBundle currentBundle = getDefaultBundle();
     private final IObjectState configManager = new LocalConfig();
-
     public MainApplicationFrame() {
         int inset = 50;
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -53,7 +55,7 @@ public class MainApplicationFrame extends JFrame {
                 exitProgram();
             }
         });
-
+        translate();
     }
 
     protected LogWindow createLogWindow() {
@@ -79,27 +81,65 @@ public class MainApplicationFrame extends JFrame {
         menuBar.add(createLookAndFeelMenu());
         menuBar.add(createTestMenu());
         menuBar.add(createExitMenu());
+        menuBar.add(generateLangMenu());
 
         return menuBar;
     }
 
+    private JMenu generateLangMenu() {
+        JMenu langMenu = new JMenu(currentBundle.getString("lang"));
+        langMenu.setMnemonic(KeyEvent.VK_L);
+        {
+            JMenuItem russian = new JMenuItem("Русский");
+            russian.addActionListener((event) -> {
+                Locale.setDefault(new Locale("ru"));
+                currentBundle = ResourceBundle.getBundle("locale.Resource", Locale.getDefault());
+                translate();
+            });
+
+            JMenuItem english = new JMenuItem("English");
+            english.addActionListener((event) -> {
+                Locale.setDefault(new Locale("en"));
+                currentBundle = ResourceBundle.getBundle("locale.Resource", Locale.getDefault());
+                translate();
+            });
+
+            langMenu.add(russian);
+            langMenu.add(english);
+        }
+        return langMenu;
+    }
+
+    private static ResourceBundle getDefaultBundle() {
+        String defLang = Locale.getDefault().getLanguage();
+        if ("en".equals(defLang) || "ru".equals(defLang)) {
+            return ResourceBundle.getBundle("locale.Resource", Locale.getDefault());
+        }
+        return ResourceBundle.getBundle("locale.Resource", new Locale("en"));
+    }
+
+
+    private void translate() {
+        for (JInternalFrame frame: desktopPane.getAllFrames()) {
+            ((Translatable)frame).translate(currentBundle);
+        }
+        setJMenuBar(generateMenuBar());
+    }
+
+
 
     private JMenu createLookAndFeelMenu() {
-        JMenu lookAndFeelMenu = new JMenu("Режим отображения");
+        JMenu lookAndFeelMenu = new JMenu(currentBundle.getString("mode"));
         lookAndFeelMenu.setMnemonic(KeyEvent.VK_V);
-        lookAndFeelMenu.getAccessibleContext().
-
-                setAccessibleDescription(
-                        "Управление режимом отображения приложения");
 
 
         lookAndFeelMenu.add(
-                createJMenuItem("Системная схема",
+                createJMenuItem(currentBundle.getString("system"),
                         KeyEvent.VK_S,
                         UIManager.getSystemLookAndFeelClassName()));
 
 
-        lookAndFeelMenu.add(createJMenuItem("Универсальная схема",
+        lookAndFeelMenu.add(createJMenuItem(currentBundle.getString("universal"),
                 KeyEvent.VK_S,
                 UIManager.getCrossPlatformLookAndFeelClassName()));
 
@@ -117,14 +157,12 @@ public class MainApplicationFrame extends JFrame {
     }
 
     private JMenu createTestMenu() {
-        JMenu testMenu = new JMenu("Тесты");
+        JMenu testMenu = new JMenu(currentBundle.getString("tests"));
         testMenu.setMnemonic(KeyEvent.VK_T);
-        testMenu.getAccessibleContext().setAccessibleDescription(
-                "Тестовые команды");
 
-            JMenuItem addLogMessageItem = new JMenuItem("Сообщение в лог", KeyEvent.VK_S);
+            JMenuItem addLogMessageItem = new JMenuItem(currentBundle.getString("logMessage"), KeyEvent.VK_S);
             addLogMessageItem.addActionListener((event) -> {
-                Logger.debug("Новая строка");
+                Logger.debug(currentBundle.getString("testMessage"));
             });
             testMenu.add(addLogMessageItem);
 
@@ -133,23 +171,28 @@ public class MainApplicationFrame extends JFrame {
 
 
     private JMenu createExitMenu() {
-        JMenu exitMenu = new JMenu("Выход");
+        JMenu exitMenu = new JMenu(currentBundle.getString("exit"));
         exitMenu.setMnemonic(KeyEvent.VK_E);
         exitMenu.getAccessibleContext().setAccessibleDescription(
-                "Выход из приложения");
+                currentBundle.getString("exitButton")   );
 
 
         exitMenu.addMenuListener(new MenuListener() {
             @Override
             public void menuSelected(MenuEvent e) {
+                saveConfiguration();
                 exitProgram();
             }
 
             @Override
-            public void menuDeselected(MenuEvent e) {}
+            public void menuDeselected(MenuEvent e) {
+                saveConfiguration();
+            }
 
             @Override
-            public void menuCanceled(MenuEvent e) {}
+            public void menuCanceled(MenuEvent e) {
+                saveConfiguration();
+            }
         });
 
         return exitMenu;
@@ -157,11 +200,9 @@ public class MainApplicationFrame extends JFrame {
 
 
     public void exitProgram() {
-        String[] options = new String[2];
-        options[0] = "Да";
-        options[1] = "Нет";
+        Object[] options = {currentBundle.getString("accept"), currentBundle.getString("dispose")};
         if (JOptionPane.showOptionDialog(this.getContentPane(),
-                "Вы уверены, что хотите выйти?", "Закрыть окно?",
+                currentBundle.getString("exitMessage"), currentBundle.getString("exit"),
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.INFORMATION_MESSAGE,
                 null,
@@ -170,6 +211,17 @@ public class MainApplicationFrame extends JFrame {
             System.exit(0);
         }
     }
+
+    private Object writeReplace() {
+        return new Settings(getSize(), getLocationOnScreen(), getState(), getClass().getSimpleName());
+    }
+    public void setSettings(Settings settings) {
+        setState(settings.state);
+        setBounds(settings.location.x, settings.location.y,
+                settings.screenSize.width,
+                settings.screenSize.height);
+    }
+
 
     protected void saveConfiguration() {
         JSONObject json = new JSONObject();
