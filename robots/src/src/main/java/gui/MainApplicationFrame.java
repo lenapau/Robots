@@ -93,7 +93,7 @@ public class MainApplicationFrame extends JFrame implements Serializable, Settab
             JMenuItem russian = new JMenuItem("Русский");
             russian.addActionListener((event) -> {
                 Locale.setDefault(new Locale("ru"));
-                currentBundle = ResourceBundle.getBundle("main.java.locale.Resource", Locale.getDefault());
+                currentBundle = ResourceBundle.getBundle("locale.Resource", Locale.getDefault());
                 translate();
             });
 
